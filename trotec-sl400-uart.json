@@ -1,0 +1,186 @@
+{
+  "protocol": {
+    "name": "trotec-sl400-uart",
+    "version": "0.1.0",
+    "status": "reverse_engineered_partial",
+    "transport": {
+      "type": "serial-over-usb",
+      "usb_bridge": "CP210x",
+      "serial": {
+        "baudRate": 9600,
+        "dataBits": 8,
+        "parity": "NONE",
+        "stopBits": 1,
+        "flowControl": "NONE",
+        "dtr": false,
+        "rts": false
+      }
+    },
+    "stream": {
+      "framing": {
+        "markerByte": "0xA5",
+        "mode": "tagged-stream",
+        "sampleTerminationTag": "0x00"
+      },
+      "tagModel": {
+        "description": "Der Stream besteht aus wiederholten Sequenzen aus Marker 0xA5, gefolgt von einem Tag und optionalem Payload.",
+        "payloadLengthStrategy": "fixed-per-tag"
+      }
+    },
+    "tags": [
+      {
+        "tag": "0x0D",
+        "name": "measurement",
+        "payloadLength": 2,
+        "status": "confirmed",
+        "encoding": {
+          "type": "packed-bcd",
+          "format": "hundreds in low nibble of byte1, tens/ones in byte2",
+          "unit": "dB",
+          "resolution": 0.1
+        },
+        "decode": {
+          "rawTenthsFormula": "((byte1 & 0x0F) * 100) + (((byte2 >> 4) & 0x0F) * 10) + (byte2 & 0x0F)",
+          "valueFormula": "rawTenths / 10.0"
+        },
+        "examples": [
+          {
+            "payloadHex": "04 78",
+            "rawTenths": 478,
+            "value": 47.8
+          },
+          {
+            "payloadHex": "07 01",
+            "rawTenths": 701,
+            "value": 70.1
+          },
+          {
+            "payloadHex": "06 92",
+            "rawTenths": 692,
+            "value": 69.2
+          }
+        ]
+      },
+      {
+        "tag": "0x06",
+        "name": "aux06",
+        "payloadLength": 3,
+        "status": "observed_unknown",
+        "encoding": {
+          "type": "raw-bytes"
+        },
+        "examples": [
+          {
+            "payloadHex": "26 43 11"
+          },
+          {
+            "payloadHex": "26 43 15"
+          },
+          {
+            "payloadHex": "26 43 16"
+          }
+        ],
+        "notes": [
+          "Wird aktuell als aux06Hex gespeichert.",
+          "Könnte Status, Counter oder Modusinformation enthalten."
+        ]
+      },
+      {
+        "tag": "0x1B",
+        "name": "tag_1B",
+        "payloadLength": 1,
+        "status": "observed_unknown"
+      },
+      {
+        "tag": "0x0B",
+        "name": "tag_0B",
+        "payloadLength": 1,
+        "status": "observed_unknown"
+      },
+      {
+        "tag": "0x00",
+        "name": "sample_end",
+        "payloadLength": 0,
+        "status": "confirmed",
+        "notes": [
+          "Beendet ein dekodierbares Sample.",
+          "Wenn ein Messwert vorhanden ist, wird bei diesem Tag ein Sl400Sample emittiert."
+        ]
+      },
+      {
+        "tag": "0x02",
+        "name": "tag_02",
+        "payloadLength": 0,
+        "status": "observed_unknown"
+      },
+      {
+        "tag": "0x0C",
+        "name": "tag_0C",
+        "payloadLength": 0,
+        "status": "observed_unknown"
+      },
+      {
+        "tag": "0x0E",
+        "name": "tag_0E",
+        "payloadLength": 0,
+        "status": "observed_unknown"
+      },
+      {
+        "tag": "0x19",
+        "name": "tag_19",
+        "payloadLength": 0,
+        "status": "observed_unknown"
+      },
+      {
+        "tag": "0x1A",
+        "name": "tag_1A",
+        "payloadLength": 0,
+        "status": "observed_unknown"
+      },
+      {
+        "tag": "0x1F",
+        "name": "tag_1F",
+        "payloadLength": 0,
+        "status": "observed_unknown"
+      },
+      {
+        "tag": "0x4B",
+        "name": "tag_4B",
+        "payloadLength": 0,
+        "status": "observed_unknown"
+      }
+    ],
+    "sampleModel": {
+      "name": "Sl400Sample",
+      "fields": [
+        {
+          "name": "timestamp",
+          "type": "instant"
+        },
+        {
+          "name": "db",
+          "type": "number",
+          "unit": "dB"
+        },
+        {
+          "name": "rawTenths",
+          "type": "integer"
+        },
+        {
+          "name": "aux06Hex",
+          "type": "string",
+          "nullable": true
+        },
+        {
+          "name": "tags",
+          "type": "array",
+          "items": "integer"
+        }
+      ]
+    },
+    "decoderBehavior": {
+      "unknownTagHandling": "resync_to_next_marker",
+      "sampleEmissionRule": "emit_on_tag_0x00_if_measurement_present"
+    }
+  }
+}
